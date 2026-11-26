@@ -1,0 +1,11 @@
+-- Rollback Phase 1 module schemas and roles.
+DROP SCHEMA IF EXISTS audit CASCADE;
+DROP SCHEMA IF EXISTS media CASCADE;
+DROP SCHEMA IF EXISTS discovery CASCADE;
+DROP SCHEMA IF EXISTS brew CASCADE;
+DROP SCHEMA IF EXISTS knowledge CASCADE;
+DROP SCHEMA IF EXISTS organization CASCADE;
+DROP SCHEMA IF EXISTS identity CASCADE;
+
+DROP ROLE IF EXISTS semaian_audit_writer;
+DROP ROLE IF EXISTS semaian_runtime;

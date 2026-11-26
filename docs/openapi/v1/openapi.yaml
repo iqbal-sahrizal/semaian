@@ -1,0 +1,77 @@
+openapi: 3.1.0
+info:
+  title: Semaian API
+  version: 1.0.0
+  description: Semaian modular monolith HTTP API (Phase 1 Foundation).
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /health/live:
+    get:
+      summary: Process liveness check
+      operationId: getHealthLive
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /health/ready:
+    get:
+      summary: Service readiness check (verifies PostgreSQL connectivity)
+      operationId: getHealthReady
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Service is not ready
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/meta:
+    get:
+      summary: API metadata
+      operationId: getApiMeta
+      responses:
+        "200":
+          description: API version metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, version]
+                properties:
+                  service:
+                    type: string
+                  version:
+                    type: string
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string

@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+dist/
+build/
+node_modules/
+.next/
+vendor/
