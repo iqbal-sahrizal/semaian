@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.23"
+          go-version: "1.26.11"
           cache-dependency-path: services/api/go.sum
       - name: Check gofmt
         run: |
@@ -58,17 +58,28 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.23"
+          go-version: "1.26.11"
           cache-dependency-path: services/api/go.sum
       - name: Apply migrations and verify latest down/up
         env:
           PGPASSWORD: test_password
         run: |
+          latest_up=""
           for f in services/api/internal/platform/migrations/*.up.sql; do
             psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f "$f"
+            latest_up="$f"
           done
-          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f services/api/internal/platform/migrations/000006_knowledge_search_fts.down.sql
-          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f services/api/internal/platform/migrations/000006_knowledge_search_fts.up.sql
+          if [ -z "$latest_up" ]; then
+            echo "No up migrations found"
+            exit 1
+          fi
+          latest_down="${latest_up%.up.sql}.down.sql"
+          if [ ! -f "$latest_down" ]; then
+            echo "Missing down migration for $latest_up: $latest_down"
+            exit 1
+          fi
+          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f "$latest_down"
+          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f "$latest_up"
       - name: Run PostgreSQL integration tests
         env:
           DATABASE_URL: postgres://semaian:test_password@localhost:5432/semaian_test?sslmode=disable
@@ -82,7 +93,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.23"
+          go-version: "1.26.11"
           cache-dependency-path: services/api/go.sum
       - name: Run govulncheck
         run: |
