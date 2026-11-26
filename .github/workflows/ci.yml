@@ -4,27 +4,22 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  go-test:
+  go-quality:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: semaian_test
-          POSTGRES_USER: semaian
-          POSTGRES_PASSWORD: test_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U semaian -d semaian_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: "1.23"
           cache-dependency-path: services/api/go.sum
@@ -40,30 +35,64 @@ jobs:
       - name: Run go vet
         run: cd services/api && go vet ./...
       - name: Run unit tests with race detector
-        run: cd services/api && go test -race ./...
-      - name: Run integration tests
+        run: cd services/api && go test -count=1 -race ./...
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    needs: go-quality
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: semaian_test
+          POSTGRES_USER: semaian
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U semaian -d semaian_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: services/api/go.sum
+      - name: Apply migrations and verify latest down/up
+        env:
+          PGPASSWORD: test_password
+        run: |
+          for f in services/api/internal/platform/migrations/*.up.sql; do
+            psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f "$f"
+          done
+          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f services/api/internal/platform/migrations/000006_knowledge_search_fts.down.sql
+          psql -h localhost -U semaian -d semaian_test -v ON_ERROR_STOP=1 -f services/api/internal/platform/migrations/000006_knowledge_search_fts.up.sql
+      - name: Run PostgreSQL integration tests
         env:
           DATABASE_URL: postgres://semaian:test_password@localhost:5432/semaian_test?sslmode=disable
-        run: cd services/api && go test -race -tags=integration ./...
-      - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          cd services/api && govulncheck ./...
+        run: cd services/api && go test -count=1 -race -tags=integration ./...
 
-  openapi-lint:
+  security-checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: stoplightio/spectral-action@v0.8.12
-        with:
-          file_glob: "docs/openapi/v1/openapi.yaml"
-
-  secret-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: services/api/go.sum
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          cd services/api && govulncheck ./...
+      - name: Lint OpenAPI 3.1 contract
+        uses: stoplightio/spectral-action@577bade2d6e0eeb50528c94182a5588bf961ae8f # v0.8.12
+        with:
+          file_glob: "docs/openapi/v1/openapi.yaml"
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
