@@ -13,7 +13,7 @@ import (
 
 func TestHealthAndMetaEndpoints(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
-	router := newRouter(logger, nil)
+	router := newRouter(logger, nil, nil)
 
 	t.Run("health live matches OpenAPI HealthStatus", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/health/live", nil)
