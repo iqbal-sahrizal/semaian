@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Semaian API
   version: 1.0.0
-  description: Semaian modular monolith HTTP API (Phase 1 Foundation).
+  description: Semaian modular monolith HTTP API (Phase 2 Identity & Organization Foundation).
 servers:
   - url: http://localhost:8080
     description: Local development
@@ -52,7 +52,1076 @@ paths:
                     type: string
                   version:
                     type: string
+  /api/v1/me:
+    get:
+      summary: Get current authenticated user
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/me/profile:
+    get:
+      summary: Get current user profile
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      summary: Update current user profile
+      operationId: updateMyProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/organizations:
+    get:
+      summary: List organizations accessible to current user
+      operationId: listOrganizations
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Accessible organizations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Organization"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      summary: Create a new organization
+      operationId: createOrganization
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        "201":
+          description: Created organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/organizations/{orgID}:
+    get:
+      summary: Get organization details
+      operationId: getOrganization
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+      responses:
+        "200":
+          description: Organization details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    patch:
+      summary: Update organization
+      operationId: updateOrganization
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "200":
+          description: Updated organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/organizations/{orgID}/members:
+    get:
+      summary: List organization members
+      operationId: listOrganizationMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+      responses:
+        "200":
+          description: Active members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Membership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/organizations/{orgID}/members/{userID}/role:
+    patch:
+      summary: Change organization member role
+      operationId: changeMemberRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+        - $ref: "#/components/parameters/UserID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        "200":
+          description: Updated membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/organizations/{orgID}/members/{userID}:
+    delete:
+      summary: Remove organization member
+      operationId: removeOrganizationMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "204":
+          description: Member removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/organizations/{orgID}/transfer-ownership:
+    post:
+      summary: Transfer organization ownership
+      operationId: transferOrganizationOwnership
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrgID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_owner_user_id]
+              properties:
+                new_owner_user_id:
+                  type: string
+                  format: uuid
+      responses:
+        "204":
+          description: Ownership transferred
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/knowledge/origins:
+    get:
+      summary: List published coffee origins
+      operationId: listKnowledgeOrigins
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/KnowledgeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/origins/{slug}:
+    get:
+      summary: Get published coffee origin by slug
+      operationId: getKnowledgeOrigin
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Locale"
+      responses:
+        "200":
+          description: Published origin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/knowledge/varieties:
+    get:
+      summary: List published coffee varieties
+      operationId: listKnowledgeVarieties
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/KnowledgeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/varieties/{slug}:
+    get:
+      summary: Get published coffee variety by slug
+      operationId: getKnowledgeVariety
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Locale"
+      responses:
+        "200":
+          description: Published variety
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/knowledge/processes:
+    get:
+      summary: List published processing methods
+      operationId: listKnowledgeProcesses
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/KnowledgeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/roast-levels:
+    get:
+      summary: List published roast levels
+      operationId: listKnowledgeRoastLevels
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/KnowledgeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/flavors:
+    get:
+      summary: List published flavor descriptors
+      operationId: listKnowledgeFlavors
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/KnowledgeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/articles:
+    get:
+      summary: List published educational articles
+      operationId: listKnowledgeArticles
+      parameters:
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Published articles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  articles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PublicArticle"
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /api/v1/knowledge/articles/{slug}:
+    get:
+      summary: Get published article by slug
+      operationId: getKnowledgeArticle
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Published article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicArticle"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/knowledge/search:
+    get:
+      summary: Search published coffee knowledge
+      operationId: searchKnowledge
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+        - $ref: "#/components/parameters/Locale"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SearchResult"
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /api/v1/editorial/knowledge/sources:
+    post:
+      summary: Register a provenance source
+      operationId: createEditorialSource
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_type, title, license_type]
+              properties:
+                source_type: { type: string }
+                title: { type: string }
+                canonical_url: { type: string }
+                publisher: { type: string }
+                license_type: { type: string }
+                commercial_use_compatible: { type: boolean }
+                attribution_text: { type: string }
+                notes: { type: string }
+      responses:
+        "201":
+          description: Source created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialSource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/editorial/knowledge/claims:
+    post:
+      summary: Register a factual claim linked to a source
+      operationId: createEditorialClaim
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_id, subject_type, subject_id, claim_text]
+              properties:
+                source_id: { type: string, format: uuid }
+                subject_type: { type: string }
+                subject_id: { type: string, format: uuid }
+                claim_text: { type: string }
+      responses:
+        "201":
+          description: Claim created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialClaim"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/editorial/knowledge/translations:
+    post:
+      summary: Insert a localized translation for a structured knowledge entity
+      operationId: insertEditorialTranslation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entity_type, entity_id, locale, title]
+              properties:
+                entity_type: { type: string }
+                entity_id: { type: string, format: uuid }
+                locale: { type: string, enum: [en, id] }
+                title: { type: string }
+                summary: { type: string }
+                body: { type: string }
+                status: { type: string }
+      responses:
+        "201":
+          description: Translation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialTranslation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/countries:
+    post:
+      summary: Create a coffee country
+      operationId: createEditorialCountry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [iso_code, slug]
+              properties:
+                iso_code: { type: string }
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialCountry"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/regions:
+    post:
+      summary: Create a coffee region
+      operationId: createEditorialRegion
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country_id, slug]
+              properties:
+                country_id: { type: string, format: uuid }
+                parent_id: { type: [string, "null"], format: uuid }
+                slug: { type: string }
+                min_masl: { type: [integer, "null"] }
+                max_masl: { type: [integer, "null"] }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialRegion"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/producers:
+    post:
+      summary: Create a coffee producer
+      operationId: createEditorialProducer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [region_id, producer_type, slug]
+              properties:
+                region_id: { type: string, format: uuid }
+                producer_type: { type: string }
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialProducer"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/species:
+    post:
+      summary: Create a coffee species
+      operationId: createEditorialSpecies
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scientific_name, slug]
+              properties:
+                scientific_name: { type: string }
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialSpecies"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/varieties:
+    post:
+      summary: Create a coffee variety
+      operationId: createEditorialVariety
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [species_id, slug]
+              properties:
+                species_id: { type: string, format: uuid }
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialVariety"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/processing-methods:
+    post:
+      summary: Create a processing method
+      operationId: createEditorialProcessingMethod
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug]
+              properties:
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialProcessingMethod"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/roast-levels:
+    post:
+      summary: Create a roast level
+      operationId: createEditorialRoastLevel
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, sort_order]
+              properties:
+                slug: { type: string }
+                sort_order: { type: integer }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialRoastLevel"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/flavors:
+    post:
+      summary: Create a flavor descriptor
+      operationId: createEditorialFlavorDescriptor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug]
+              properties:
+                parent_id: { type: [string, "null"], format: uuid }
+                slug: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialFlavorDescriptor"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /api/v1/editorial/knowledge/articles:
+    post:
+      summary: Create draft article and initial revision
+      operationId: createEditorialArticle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, title, body]
+              properties:
+                slug:
+                  type: string
+                title:
+                  type: string
+                body:
+                  type: string
+      responses:
+        "201":
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticleWithRevision"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/articles/{articleID}/revisions:
+    post:
+      summary: Create a new pending revision for an existing article
+      operationId: createEditorialRevision
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+      responses:
+        "201":
+          description: Revision created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialRevision"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/editorial/knowledge/articles/{articleID}/submit:
+    post:
+      summary: Submit draft article for review
+      operationId: submitEditorialArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+      responses:
+        "200":
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/articles/{articleID}/revisions/{revisionID}/review:
+    post:
+      summary: Approve or reject a submitted revision
+      operationId: reviewEditorialRevision
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+        - $ref: "#/components/parameters/RevisionID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approved, rejected]
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticleWithRevision"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/articles/{articleID}/revisions/{revisionID}/publish:
+    post:
+      summary: Publish an approved revision
+      operationId: publishEditorialArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+        - $ref: "#/components/parameters/RevisionID"
+      responses:
+        "200":
+          description: Published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/articles/{articleID}/supersede:
+    post:
+      summary: Supersede a published article with a newer article
+      operationId: supersedeEditorialArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [new_article_id]
+              properties:
+                new_article_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Superseded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticle"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/editorial/knowledge/articles/{articleID}/emergency-unpublish:
+    post:
+      summary: Emergency unpublish a published article (super_admin only)
+      operationId: emergencyUnpublishEditorialArticle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ArticleID"
+      responses:
+        "200":
+          description: Unpublished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EditorialArticle"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrgID:
+      name: orgID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserID:
+      name: userID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ArticleID:
+      name: articleID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RevisionID:
+      name: revisionID
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Locale:
+      name: locale
+      in: query
+      schema:
+        type: string
+        enum: [id, en]
+        default: id
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    TooManyRequests:
+      description: Too Many Requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    KnowledgeList:
+      description: Paginated published knowledge items
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PublicItem"
+              limit:
+                type: integer
+              offset:
+                type: integer
   schemas:
     HealthStatus:
       type: object
@@ -75,3 +1144,297 @@ components:
           type: string
         instance:
           type: string
+    User:
+      type: object
+      required: [id, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [active, suspended, deactivated]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Profile:
+      type: object
+      required: [user_id, display_name, preferred_locale, timezone, updated_at]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        avatar_ref:
+          type: string
+        preferred_locale:
+          type: string
+        timezone:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+    ProfileUpdate:
+      type: object
+      properties:
+        display_name:
+          type: string
+        avatar_ref:
+          type: string
+        preferred_locale:
+          type: string
+        timezone:
+          type: string
+    Organization:
+      type: object
+      required: [id, name, slug, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended, deactivated]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Membership:
+      type: object
+      required: [id, organization_id, user_id, role, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+        status:
+          type: string
+          enum: [active, inactive]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PublicItem:
+      type: object
+      required: [id, slug, entity_type, title, resolved_locale]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        entity_type:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        resolved_locale:
+          type: string
+    PublicArticle:
+      type: object
+      required: [id, slug, title, body, resolved_locale, published_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        resolved_locale:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+    SearchResult:
+      type: object
+      required: [entity_type, entity_id, title, resolved_locale]
+      properties:
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type: string
+        resolved_locale:
+          type: string
+    EditorialSource:
+      type: object
+      required: [ID, SourceType, Title, CanonicalURL, Publisher, LicenseType, CommercialUseCompatible, AttributionText, VerificationStatus, Notes, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        SourceType: { type: string }
+        Title: { type: string }
+        CanonicalURL: { type: string }
+        Publisher: { type: string }
+        LicenseType: { type: string }
+        CommercialUseCompatible: { type: boolean }
+        AttributionText: { type: string }
+        VerificationStatus: { type: string }
+        Notes: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialClaim:
+      type: object
+      required: [ID, SourceID, SubjectType, SubjectID, ClaimText, VerificationStatus, CreatedBy, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        SourceID: { type: string, format: uuid }
+        SubjectType: { type: string }
+        SubjectID: { type: string, format: uuid }
+        ClaimText: { type: string }
+        VerificationStatus: { type: string }
+        CreatedBy: { type: string, format: uuid }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialTranslation:
+      type: object
+      required: [ID, EntityType, EntityID, Locale, Title, Summary, Body, Status, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        EntityType: { type: string }
+        EntityID: { type: string, format: uuid }
+        Locale: { type: string, enum: [en, id] }
+        Title: { type: string }
+        Summary: { type: string }
+        Body: { type: string }
+        Status: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialCountry:
+      type: object
+      required: [ID, ISOCode, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        ISOCode: { type: string }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialRegion:
+      type: object
+      required: [ID, CountryID, ParentID, Slug, MinMASL, MaxMASL, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        CountryID: { type: string, format: uuid }
+        ParentID: { type: [string, "null"], format: uuid }
+        Slug: { type: string }
+        MinMASL: { type: [integer, "null"] }
+        MaxMASL: { type: [integer, "null"] }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialProducer:
+      type: object
+      required: [ID, RegionID, ProducerType, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        RegionID: { type: string, format: uuid }
+        ProducerType: { type: string }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialSpecies:
+      type: object
+      required: [ID, ScientificName, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        ScientificName: { type: string }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialVariety:
+      type: object
+      required: [ID, SpeciesID, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        SpeciesID: { type: string, format: uuid }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialProcessingMethod:
+      type: object
+      required: [ID, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialRoastLevel:
+      type: object
+      required: [ID, Slug, SortOrder, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        Slug: { type: string }
+        SortOrder: { type: integer }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialFlavorDescriptor:
+      type: object
+      required: [ID, ParentID, Slug, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        ParentID: { type: [string, "null"], format: uuid }
+        Slug: { type: string }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialArticle:
+      type: object
+      required: [ID, Slug, Status, AuthorID, PublishedRevisionID, SupersededByArticleID, CreatedAt, UpdatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        Slug: { type: string }
+        Status: { type: string }
+        AuthorID: { type: string, format: uuid }
+        PublishedRevisionID: { type: [string, "null"], format: uuid }
+        SupersededByArticleID: { type: [string, "null"], format: uuid }
+        CreatedAt: { type: string, format: date-time }
+        UpdatedAt: { type: string, format: date-time }
+    EditorialRevision:
+      type: object
+      required: [ID, ArticleID, RevisionNumber, Title, Body, AuthorID, ReviewerID, ReviewDecision, RejectionReason, CreatedAt]
+      properties:
+        ID: { type: string, format: uuid }
+        ArticleID: { type: string, format: uuid }
+        RevisionNumber: { type: integer }
+        Title: { type: string }
+        Body: { type: string }
+        AuthorID: { type: string, format: uuid }
+        ReviewerID: { type: [string, "null"], format: uuid }
+        ReviewDecision: { type: string }
+        RejectionReason: { type: string }
+        CreatedAt: { type: string, format: date-time }
+    EditorialArticleWithRevision:
+      type: object
+      required: [article, revision]
+      properties:
+        article:
+          $ref: "#/components/schemas/EditorialArticle"
+        revision:
+          $ref: "#/components/schemas/EditorialRevision"
